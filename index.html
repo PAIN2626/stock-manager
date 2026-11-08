@@ -122,8 +122,16 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const $ = id => document.getElementById(id);
 const defaults = ['Acessórios','Calças','Calçado','Perfumes','Ambientadores','Casacos','Camisolas','T-shirts','Vestidos'];
 let supabase=null, user=null, products=[], categories=[], editingId=null, channel=null;
-const show = id => $(id).classList.remove('hidden');
-const hide = id => $(id).classList.add('hidden');
+const show = id => {
+  const el = $(id);
+  if (el.classList.contains('modalback')) el.style.display = 'flex';
+  else el.classList.remove('hidden');
+};
+const hide = id => {
+  const el = $(id);
+  if (el.classList.contains('modalback')) el.style.display = 'none';
+  else el.classList.add('hidden');
+};
 const msg = (t) => { $('authMsg').textContent=t||''; };
 const config = () => ({url:localStorage.getItem('sm_url'),key:localStorage.getItem('sm_key')});
 
