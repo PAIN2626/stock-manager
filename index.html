@@ -63,8 +63,17 @@
     <label>Palavra-passe</label><input id="password" type="password" autocomplete="current-password" placeholder="Mínimo 6 caracteres">
     <button class="btn" id="loginBtn">Entrar</button>
     <button class="btn secondary" id="signupBtn">Criar conta</button>
+    <button class="btn ghost" id="forgotPasswordBtn">Esqueci-me da palavra-passe</button>
     <p class="small muted" id="authMsg"></p>
     <button class="btn ghost" id="changeConfig">Alterar configuração</button>
+  </section>
+
+  <section id="recoveryScreen" class="panel hidden">
+    <h1>Definir nova palavra-passe</h1>
+    <p class="muted">Escolhe uma palavra-passe nova para a tua conta.</p>
+    <label>Nova palavra-passe</label><input id="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+    <button class="btn" id="saveNewPassword">Guardar nova palavra-passe</button>
+    <p class="small muted" id="recoveryMsg"></p>
   </section>
 
   <section id="appScreen" class="hidden">
@@ -118,7 +127,7 @@ const hide = id => $(id).classList.add('hidden');
 const msg = (t) => { $('authMsg').textContent=t||''; };
 const config = () => ({url:localStorage.getItem('sm_url'),key:localStorage.getItem('sm_key')});
 
-function showOnly(screen){['configScreen','authScreen','appScreen'].forEach(x=>hide(x));show(screen);}
+function showOnly(screen){['configScreen','authScreen','recoveryScreen','appScreen'].forEach(x=>hide(x));show(screen);}
 function status(q){if(q<=1)return ['red',q===0?'Esgotado':'Repor'];if(q<=5)return ['amber','Atenção'];return ['green','Disponível'];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
@@ -127,9 +136,14 @@ async function init(){
   if(!c.url||!c.key){showOnly('configScreen');return;}
   try{
     supabase=createClient(c.url,c.key);
+    supabase.auth.onAuthStateChange(async (event,session)=>{
+      if(event==='PASSWORD_RECOVERY'){showOnly('recoveryScreen');hide('topright');return;}
+      if(session){user=session.user;await enterApp();}
+      else{user=null;showOnly('authScreen');hide('topright');}
+    });
     const {data:{session}}=await supabase.auth.getSession();
-    if(session){user=session.user;await enterApp();}else showOnly('authScreen');
-    supabase.auth.onAuthStateChange(async (_event,session)=>{if(session){user=session.user;await enterApp();}else{user=null;showOnly('authScreen');hide('topright');}});
+    if(session && !location.hash.includes('type=recovery')){user=session.user;await enterApp();}
+    else if(!location.hash.includes('type=recovery'))showOnly('authScreen');
   }catch(e){showOnly('configScreen');alert('Não foi possível ligar. Confirma o URL e a chave.');}
 }
 async function enterApp(){
@@ -189,8 +203,25 @@ function openProduct(p=null){
 $('saveConfig').onclick=()=>{const url=$('sbUrl').value.trim().replace(/\/$/,''),key=$('sbKey').value.trim();if(!url.startsWith('https://')||!key){alert('Introduz um URL válido e a chave publicável.');return;}localStorage.setItem('sm_url',url);localStorage.setItem('sm_key',key);location.reload();};
 $('changeConfig').onclick=()=>{const c=config();$('sbUrl').value=c.url||'';$('sbKey').value=c.key||'';showOnly('configScreen');};
 $('loginBtn').onclick=async()=>{msg('A entrar...');const {error}=await supabase.auth.signInWithPassword({email:$('email').value,password:$('password').value});msg(error?.message||'');};
-$('signupBtn').onclick=async()=>{msg('A criar conta...');const {data,error}=await supabase.auth.signUp({email:$('email').value,password:$('password').value});msg(error?.message||(data.session?'Conta criada.':'Conta criada. Confirma o email se for pedido.'));};
-$('logoutBtn').onclick=async()=>{await supabase.auth.signOut();};
+$('signupBtn').onclick=async()=>{msg('A criar conta...');const {data,error}=await supabase.auth.signUp({email:$('email').value,password:$('password').value,options:{emailRedirectTo:location.origin+location.pathname}});msg(error?.message||(data.session?'Conta criada.':'Conta criada. Confirma o email se for pedido.'));};
+$('forgotPasswordBtn').onclick=async()=>{
+  const email=$('email').value.trim();
+  if(!email){msg('Escreve primeiro o teu email no campo acima.');return;}
+  msg('A enviar email para recuperar a palavra-passe...');
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  msg(error?'Não foi possível enviar o email: '+error.message:'Se a conta existir, receberás um email com o link para definir uma nova palavra-passe. Verifica também o Spam.');
+};
+$('saveNewPassword').onclick=async()=>{
+  const password=$('newPassword').value;
+  if(password.length<6){$('recoveryMsg').textContent='A palavra-passe deve ter pelo menos 6 caracteres.';return;}
+  $('recoveryMsg').textContent='A guardar...';
+  const {error}=await supabase.auth.updateUser({password});
+  if(error){$('recoveryMsg').textContent='Erro: '+error.message;return;}
+  $('recoveryMsg').textContent='Palavra-passe alterada com sucesso. A entrar...';
+  const {data:{user:updatedUser}}=await supabase.auth.getUser();
+  if(updatedUser){user=updatedUser;await enterApp();}
+};
+$('logoutBtn')=async()=>{await supabase.auth.signOut();};
 $('settingsBtn').onclick=()=>{show('categoryModal');$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
 $('addProductBtn').onclick=()=>openProduct();$('cancelProduct').onclick=()=>hide('productModal');$('saveProduct').onclick=saveProduct;
 $('closeCategories').onclick=()=>hide('categoryModal');
