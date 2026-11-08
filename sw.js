@@ -1,4 +1,4 @@
-const CACHE = 'tyana-closet-v5';
+const CACHE = 'tyana-closet-v6';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './logo-tyana-closet.png', './icon-tyana-closet.png'];
 
 self.addEventListener('install', (event) => {

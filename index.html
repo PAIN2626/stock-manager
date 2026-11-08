@@ -34,6 +34,7 @@
     .modal{background:white;border-radius:18px;padding:22px;width:min(100%,480px);max-height:90vh;overflow:auto}
     .modal label{display:block;font-size:13px;font-weight:700;margin:12px 0 5px}.modal input,.modal select{width:100%}
     .modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+    .category-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f2dce4}.category-row:last-child{border-bottom:0}.category-row button{padding:6px 9px;font-size:12px}
     .empty{background:white;border:1px dashed #cbd5e1;border-radius:16px;padding:42px 20px;text-align:center;color:#64748b;grid-column:1/-1}
     .hidden{display:none!important}.notice{background:#fff0f4;border:1px solid #f1cbd8;padding:12px 14px;border-radius:12px;color:#9b526b;margin:14px 0}
     .topright{display:flex;gap:8px;align-items:center}.topright button{font-size:13px;padding:8px 10px}
@@ -127,7 +128,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const $ = id => document.getElementById(id);
-const defaults = ['Acessórios','Calças','Calçado','Perfumes','Ambientadores','Casacos','Camisolas','T-shirts','Vestidos'];
+const defaults = ['Acessórios','Calças','Calçado','Perfumes','Ambientadores','Casacos','Camisolas','T-shirts','Vestidos','Cuecas','Meias'];
 let supabase=null, user=null, products=[], categories=[], editingId=null, channel=null;
 const show = id => {
   const el = $(id);
@@ -155,7 +156,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function money(v){return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(Number(v)||0);}
 function categoryNeedsSize(categoryName){
   const n=String(categoryName||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-  return ['calcado','calcas','casacos','camisolas','t-shirts','tshirts','vestidos'].includes(n);
+  return ['calcado','calcas','casacos','camisolas','t-shirts','tshirts','vestidos','cuecas','meias'].includes(n);
 }
 function updateSizeField(){
   const name=$('pCategory').selectedOptions[0]?.textContent||'';
@@ -267,11 +268,28 @@ $('saveNewPassword').onclick=async()=>{
   if(updatedUser){user=updatedUser;await enterApp();}
 };
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();};
-$('settingsBtn').onclick=()=>{show('categoryModal');$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
+function renderCategoryList(){
+  $('categoryList').innerHTML=categories.length?categories.map(c=>{
+    const count=products.filter(p=>p.category_id===c.id).length;
+    return `<div class="category-row"><span>${esc(c.name)} <span class="muted">(${count} artigos)</span></span><button class="btn danger" data-delete-category="${c.id}">Apagar</button></div>`;
+  }).join(''):'Ainda não existem categorias.';
+}
+$('settingsBtn').onclick=()=>{show('categoryModal');renderCategoryList();};
 $('addProductBtn').onclick=()=>openProduct();$('cancelProduct').onclick=()=>hide('productModal');$('saveProduct').onclick=saveProduct;
 $('pCategory').onchange=updateSizeField;
 $('closeCategories').onclick=()=>hide('categoryModal');
-$('addCategory').onclick=async()=>{const name=$('newCategory').value.trim();if(!name)return;const {error}=await supabase.from('categories').insert({name,user_id:user.id});if(error){alert('Não foi possível adicionar a categoria. '+error.message);return;}$('newCategory').value='';await refreshCategories();$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
+$('addCategory').onclick=async()=>{const name=$('newCategory').value.trim();if(!name)return;const {error}=await supabase.from('categories').insert({name,user_id:user.id});if(error){alert('Não foi possível adicionar a categoria. '+error.message);return;}$('newCategory').value='';await refreshCategories();renderCategoryList();};
+$('categoryList').onclick=async e=>{
+  const b=e.target.closest('button[data-delete-category]');if(!b)return;
+  const id=b.dataset.deleteCategory;
+  const category=categories.find(c=>c.id===id);if(!category)return;
+  const linked=products.filter(p=>p.category_id===id).length;
+  if(linked>0){alert(`Não podes apagar a categoria "${category.name}" porque tem ${linked} artigo(s) associado(s). Primeiro altera a categoria desses artigos ou elimina-os.`);return;}
+  if(!confirm(`Tens a certeza de que queres apagar a categoria "${category.name}"?`))return;
+  const {error}=await supabase.from('categories').delete().eq('id',id).eq('user_id',user.id);
+  if(error){alert('Não foi possível apagar a categoria. '+error.message);return;}
+  await refreshCategories();renderCategoryList();
+};
 $('productGrid').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const p=products.find(x=>x.id===b.dataset.id);if(!p)return;const act=b.dataset.act;
   if(act==='edit')openProduct(p);
   if(act==='plus'||act==='minus'){const quantity=Number(p.quantity)+(act==='plus'?1:-1);if(quantity<0)return;const {error}=await supabase.from('products').update({quantity}).eq('id',p.id);if(error)alert(error.message);else await refreshProducts();}
