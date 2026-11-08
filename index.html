@@ -221,7 +221,7 @@ $('saveNewPassword').onclick=async()=>{
   const {data:{user:updatedUser}}=await supabase.auth.getUser();
   if(updatedUser){user=updatedUser;await enterApp();}
 };
-$('logoutBtn')=async()=>{await supabase.auth.signOut();};
+$('logoutBtn').onclick=async()=>{await supabase.auth.signOut();};
 $('settingsBtn').onclick=()=>{show('categoryModal');$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
 $('addProductBtn').onclick=()=>openProduct();$('cancelProduct').onclick=()=>hide('productModal');$('saveProduct').onclick=saveProduct;
 $('closeCategories').onclick=()=>hide('categoryModal');
