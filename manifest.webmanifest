@@ -1,16 +1,16 @@
 {
-  "name": "Stock Manager",
-  "short_name": "Stock",
+  "name": "Tyana Closet",
+  "short_name": "Tyana",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f4f6fb",
-  "theme_color": "#172554",
+  "background_color": "#fff8fa",
+  "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "./icon-tyana-closet.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

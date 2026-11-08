@@ -1,5 +1,5 @@
-const CACHE = 'tyana-closet-v4';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'tyana-closet-v5';
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './logo-tyana-closet.png', './icon-tyana-closet.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -21,11 +21,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
-
       return fetch(event.request).then((response) => {
         if (response && response.ok && new URL(event.request.url).origin === self.location.origin) {
           const copy = response.clone();
