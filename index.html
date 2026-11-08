@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#172554">
+  <meta name="theme-color" content="#d98fa8">
   <meta name="description" content="Gestão simples de stock para a tua loja.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <title>Stock Manager</title>
+  <title>Tyana Closet</title>
   <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f4f6fb;font-synthesis:none}
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#55434b;background:#fff8fa;font-synthesis:none}
     *{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}
-    .top{background:#172554;color:white;padding:18px max(20px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .brand{font-weight:800;font-size:20px;letter-spacing:-.4px}.brand span{color:#93c5fd}
+    .top{background:#d98fa8;color:white;padding:18px max(20px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{font-weight:800;font-size:20px;letter-spacing:-.4px}.brand span{color:#fff0f5}
     .wrap{max-width:1180px;margin:28px auto;padding:0 20px}.muted{color:#6b7280}.small{font-size:13px}
     .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
     h1{font-size:28px;margin:0 0 6px;letter-spacing:-.7px}h2{font-size:18px;margin:0 0 14px}
     .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:18px 0 24px}
-    .stat,.panel,.product{background:white;border:1px solid #e7eaf1;border-radius:16px;box-shadow:0 3px 12px #17255408}
+    .stat,.panel,.product{background:white;border:1px solid #f2dce4;border-radius:16px;box-shadow:0 3px 12px #9d536b10}
     .stat{padding:18px}.stat .num{font-size:28px;font-weight:800;margin-top:6px}
     .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.filters input{flex:1;min-width:180px}
-    input,select{border:1px solid #d7dce7;border-radius:10px;padding:11px 12px;background:white;color:#172033;min-width:0}
-    .btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700;background:#1d4ed8;color:white}
-    .btn:hover{filter:brightness(.96)}.btn.secondary{background:#e8eefc;color:#1e40af}.btn.ghost{background:#f1f3f8;color:#344054}.btn.danger{background:#fee2e2;color:#991b1b}
+    input,select{border:1px solid #ead3dc;border-radius:10px;padding:11px 12px;background:white;color:#55434b;min-width:0}
+    .btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700;background:#d98fa8;color:white}
+    .btn:hover{filter:brightness(.96)}.btn.secondary{background:#f9e8ee;color:#9b526b}.btn.ghost{background:#fff0f4;color:#765563}.btn.danger{background:#fee2e2;color:#991b1b}
     .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
     .product{padding:16px;border-left:5px solid #16a34a}.product.red{border-left-color:#dc2626;background:#fff7f7}.product.amber{border-left-color:#d97706}
     .phead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.pname{font-weight:800;font-size:16px;overflow-wrap:anywhere}
@@ -35,7 +35,7 @@
     .modal label{display:block;font-size:13px;font-weight:700;margin:12px 0 5px}.modal input,.modal select{width:100%}
     .modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
     .empty{background:white;border:1px dashed #cbd5e1;border-radius:16px;padding:42px 20px;text-align:center;color:#64748b;grid-column:1/-1}
-    .hidden{display:none!important}.notice{background:#eff6ff;border:1px solid #bfdbfe;padding:12px 14px;border-radius:12px;color:#1e40af;margin:14px 0}
+    .hidden{display:none!important}.notice{background:#fff0f4;border:1px solid #f1cbd8;padding:12px 14px;border-radius:12px;color:#9b526b;margin:14px 0}
     .topright{display:flex;gap:8px;align-items:center}.topright button{font-size:13px;padding:8px 10px}
     @media(max-width:1000px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -44,7 +44,7 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand">Stock <span>Manager</span></div>
+  <div class="brand">Tyana <span>Closet</span></div>
   <div class="topright hidden" id="topright"><span class="small" id="userEmail"></span><button class="btn secondary" id="settingsBtn">Configuração</button><button class="btn ghost" id="logoutBtn">Sair</button></div>
 </header>
 
