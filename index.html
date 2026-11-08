@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#172554">
+  <meta name="description" content="Gestão simples de stock para a tua loja.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>Stock Manager</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f4f6fb;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}
+    .top{background:#172554;color:white;padding:18px max(20px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{font-weight:800;font-size:20px;letter-spacing:-.4px}.brand span{color:#93c5fd}
+    .wrap{max-width:1180px;margin:28px auto;padding:0 20px}.muted{color:#6b7280}.small{font-size:13px}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+    h1{font-size:28px;margin:0 0 6px;letter-spacing:-.7px}h2{font-size:18px;margin:0 0 14px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0 24px}
+    .stat,.panel,.product{background:white;border:1px solid #e7eaf1;border-radius:16px;box-shadow:0 3px 12px #17255408}
+    .stat{padding:18px}.stat .num{font-size:28px;font-weight:800;margin-top:6px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.filters input{flex:1;min-width:180px}
+    input,select{border:1px solid #d7dce7;border-radius:10px;padding:11px 12px;background:white;color:#172033;min-width:0}
+    .btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700;background:#1d4ed8;color:white}
+    .btn:hover{filter:brightness(.96)}.btn.secondary{background:#e8eefc;color:#1e40af}.btn.ghost{background:#f1f3f8;color:#344054}.btn.danger{background:#fee2e2;color:#991b1b}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .product{padding:16px;border-left:5px solid #16a34a}.product.red{border-left-color:#dc2626;background:#fff7f7}.product.amber{border-left-color:#d97706}
+    .phead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.pname{font-weight:800;font-size:16px;overflow-wrap:anywhere}
+    .qty{font-size:30px;font-weight:850;margin:12px 0 3px}.status{font-size:12px;font-weight:800;border-radius:999px;padding:5px 9px;display:inline-block}
+    .status.red{background:#fee2e2;color:#991b1b}.status.amber{background:#fef3c7;color:#92400e}.status.green{background:#dcfce7;color:#166534}
+    .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}.actions button{padding:8px 11px}
+    .panel{padding:22px;max-width:520px;margin:50px auto}.panel input{width:100%;margin:6px 0 12px}.panel .btn{width:100%;margin-top:6px}
+    .modalback{position:fixed;inset:0;background:#10182888;display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+    .modal{background:white;border-radius:18px;padding:22px;width:min(100%,480px);max-height:90vh;overflow:auto}
+    .modal label{display:block;font-size:13px;font-weight:700;margin:12px 0 5px}.modal input,.modal select{width:100%}
+    .modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+    .empty{background:white;border:1px dashed #cbd5e1;border-radius:16px;padding:42px 20px;text-align:center;color:#64748b;grid-column:1/-1}
+    .hidden{display:none!important}.notice{background:#eff6ff;border:1px solid #bfdbfe;padding:12px 14px;border-radius:12px;color:#1e40af;margin:14px 0}
+    .topright{display:flex;gap:8px;align-items:center}.topright button{font-size:13px;padding:8px 10px}
+    @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){.wrap{margin:20px auto;padding:0 14px}.top{padding:15px}.grid{grid-template-columns:1fr}.stat{padding:14px}.stat .num{font-size:24px}h1{font-size:24px}.topright .small{display:none}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Stock <span>Manager</span></div>
+  <div class="topright hidden" id="topright"><span class="small" id="userEmail"></span><button class="btn secondary" id="settingsBtn">Configuração</button><button class="btn ghost" id="logoutBtn">Sair</button></div>
+</header>
+
+<main class="wrap">
+  <section id="configScreen" class="panel hidden">
+    <h1>Configurar ligação</h1>
+    <p class="muted">Liga a aplicação à tua base de dados gratuita Supabase. Estes dados ficam guardados apenas neste dispositivo.</p>
+    <label>URL do projeto Supabase</label><input id="sbUrl" placeholder="https://xxxxxxxx.supabase.co">
+    <label>Chave publicável (anon/public)</label><input id="sbKey" placeholder="sb_publishable_... ou chave anon">
+    <button class="btn" id="saveConfig">Guardar ligação</button>
+    <p class="small muted">Não coloques aqui a chave secreta/service_role. Usa apenas a chave publicável.</p>
+  </section>
+
+  <section id="authScreen" class="panel hidden">
+    <h1>Bem-vindo ao teu stock</h1><p class="muted">Entra na tua conta ou cria uma conta nova.</p>
+    <label>Email</label><input id="email" type="email" autocomplete="email" placeholder="teu@email.com">
+    <label>Palavra-passe</label><input id="password" type="password" autocomplete="current-password" placeholder="Mínimo 6 caracteres">
+    <button class="btn" id="loginBtn">Entrar</button>
+    <button class="btn secondary" id="signupBtn">Criar conta</button>
+    <p class="small muted" id="authMsg"></p>
+    <button class="btn ghost" id="changeConfig">Alterar configuração</button>
+  </section>
+
+  <section id="appScreen" class="hidden">
+    <div class="toolbar">
+      <div><h1>O teu stock</h1><div class="muted small">Um só armazém / loja · sincronização online</div></div>
+      <button class="btn" id="addProductBtn">＋ Novo artigo</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="muted small">Artigos</div><div class="num" id="statProducts">0</div></div>
+      <div class="stat"><div class="muted small">Unidades em stock</div><div class="num" id="statUnits">0</div></div>
+      <div class="stat"><div class="muted small">A repor (0 ou 1)</div><div class="num" id="statLow">0</div></div>
+      <div class="stat"><div class="muted small">Esgotados</div><div class="num" id="statOut">0</div></div>
+    </div>
+    <div class="filters">
+      <input id="search" placeholder="Pesquisar artigo...">
+      <select id="categoryFilter"><option value="">Todas as categorias</option></select>
+    </div>
+    <div id="productGrid" class="grid"></div>
+    <p class="small muted" style="margin-top:20px">As alterações são sincronizadas entre dispositivos quando ambos têm ligação à internet.</p>
+  </section>
+</main>
+
+<div class="modalback" id="productModal">
+  <div class="modal">
+    <h2 id="modalTitle">Novo artigo</h2>
+    <label>Nome do artigo *</label><input id="pName" placeholder="Ex.: T-shirt básica">
+    <label>Referência (opcional)</label><input id="pSku" placeholder="Ex.: TS-001">
+    <label>Categoria *</label><select id="pCategory"></select>
+    <label>Quantidade em stock *</label><input id="pQty" type="number" min="0" step="1" value="0">
+    <div class="modalfoot"><button class="btn ghost" id="cancelProduct">Cancelar</button><button class="btn" id="saveProduct">Guardar artigo</button></div>
+  </div>
+</div>
+
+<div class="modalback" id="categoryModal">
+  <div class="modal">
+    <h2>Gerir categorias</h2>
+    <label>Nova categoria</label><input id="newCategory" placeholder="Nome da categoria">
+    <div class="modalfoot"><button class="btn ghost" id="closeCategories">Fechar</button><button class="btn" id="addCategory">Adicionar</button></div>
+    <div id="categoryList" class="small muted" style="margin-top:15px"></div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const $ = id => document.getElementById(id);
+const defaults = ['Acessórios','Calças','Calçado','Perfumes','Ambientadores','Casacos','Camisolas','T-shirts','Vestidos'];
+let supabase=null, user=null, products=[], categories=[], editingId=null, channel=null;
+const show = id => $(id).classList.remove('hidden');
+const hide = id => $(id).classList.add('hidden');
+const msg = (t) => { $('authMsg').textContent=t||''; };
+const config = () => ({url:localStorage.getItem('sm_url'),key:localStorage.getItem('sm_key')});
+
+function showOnly(screen){['configScreen','authScreen','appScreen'].forEach(x=>hide(x));show(screen);}
+function status(q){if(q<=1)return ['red',q===0?'Esgotado':'Repor'];if(q<=5)return ['amber','Atenção'];return ['green','Disponível'];}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function init(){
+  const c=config();
+  if(!c.url||!c.key){showOnly('configScreen');return;}
+  try{
+    supabase=createClient(c.url,c.key);
+    const {data:{session}}=await supabase.auth.getSession();
+    if(session){user=session.user;await enterApp();}else showOnly('authScreen');
+    supabase.auth.onAuthStateChange(async (_event,session)=>{if(session){user=session.user;await enterApp();}else{user=null;showOnly('authScreen');hide('topright');}});
+  }catch(e){showOnly('configScreen');alert('Não foi possível ligar. Confirma o URL e a chave.');}
+}
+async function enterApp(){
+  showOnly('appScreen');show('topright');$('userEmail').textContent=user.email||'Conta';await loadAll();subscribe();
+}
+async function loadAll(){
+  const [cr,pr]=await Promise.all([supabase.from('categories').select('*').order('name'),supabase.from('products').select('*').order('name')]);
+  if(cr.error||pr.error){alert('Erro ao carregar dados. Confirma se executaste o SQL de instalação no Supabase.');return;}
+  categories=cr.data||[];products=pr.data||[];
+  if(categories.length===0){const rows=defaults.map(name=>({user_id:user.id,name}));const {data,error}=await supabase.from('categories').insert(rows).select();if(!error)categories=data||[];}
+  render();
+}
+function subscribe(){
+  if(channel)supabase.removeChannel(channel);
+  channel=supabase.channel('stock-live-'+user.id)
+    .on('postgres_changes',{event:'*',schema:'public',table:'products',filter:'user_id=eq.'+user.id},()=>refreshProducts())
+    .on('postgres_changes',{event:'*',schema:'public',table:'categories',filter:'user_id=eq.'+user.id},()=>refreshCategories())
+    .subscribe();
+}
+async function refreshProducts(){const {data}=await supabase.from('products').select('*').order('name');if(data){products=data;render();}}
+async function refreshCategories(){const {data}=await supabase.from('categories').select('*').order('name');if(data){categories=data;render();}}
+function render(){
+  $('statProducts').textContent=products.length;
+  $('statUnits').textContent=products.reduce((a,p)=>a+Number(p.quantity||0),0);
+  $('statLow').textContent=products.filter(p=>Number(p.quantity)<=1).length;
+  $('statOut').textContent=products.filter(p=>Number(p.quantity)===0).length;
+  const current=$('categoryFilter').value;
+  $('categoryFilter').innerHTML='<option value="">Todas as categorias</option>'+categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  $('categoryFilter').value=current;
+  $('pCategory').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const term=$('search').value.toLowerCase(), cat=$('categoryFilter').value;
+  const list=products.filter(p=>(!cat||p.category_id===cat)&&(!term||(p.name+' '+(p.sku||'')).toLowerCase().includes(term)));
+  $('productGrid').innerHTML=list.length?list.map(p=>{
+    const [tone,label]=status(Number(p.quantity));
+    const catName=categories.find(c=>c.id===p.category_id)?.name||'Sem categoria';
+    return `<article class="product ${tone}">
+      <div class="phead"><div><div class="pname">${esc(p.name)}</div><div class="muted small">${esc(catName)}${p.sku?' · '+esc(p.sku):''}</div></div><span class="status ${tone}">${label}</span></div>
+      <div class="qty">${Number(p.quantity)} <span class="muted small">un.</span></div>
+      <div class="actions"><button class="btn secondary" data-act="minus" data-id="${p.id}">− 1</button><button class="btn secondary" data-act="plus" data-id="${p.id}">＋ 1</button><button class="btn ghost" data-act="edit" data-id="${p.id}">Editar</button><button class="btn danger" data-act="delete" data-id="${p.id}">Eliminar</button></div>
+    </article>`;
+  }).join(''):'<div class="empty"><strong>Não há artigos para mostrar.</strong><br><span class="small">Adiciona o teu primeiro artigo ou altera os filtros.</span></div>';
+}
+async function saveProduct(){
+  const name=$('pName').value.trim(), sku=$('pSku').value.trim()||null, category_id=$('pCategory').value, quantity=Number($('pQty').value);
+  if(!name||!category_id||!Number.isInteger(quantity)||quantity<0){alert('Preenche o nome, a categoria e uma quantidade válida (zero ou mais).');return;}
+  const row={name,sku,category_id,quantity,user_id:user.id};
+  const result=editingId?await supabase.from('products').update(row).eq('id',editingId):await supabase.from('products').insert(row);
+  if(result.error){alert('Não foi possível guardar. '+result.error.message);return;}
+  hide('productModal');await refreshProducts();
+}
+function openProduct(p=null){
+  editingId=p?.id||null;$('modalTitle').textContent=p?'Editar artigo':'Novo artigo';
+  $('pName').value=p?.name||'';$('pSku').value=p?.sku||'';$('pQty').value=p?.quantity??0;
+  if(p)$('pCategory').value=p.category_id;
+  show('productModal');
+}
+$('saveConfig').onclick=()=>{const url=$('sbUrl').value.trim().replace(/\/$/,''),key=$('sbKey').value.trim();if(!url.startsWith('https://')||!key){alert('Introduz um URL válido e a chave publicável.');return;}localStorage.setItem('sm_url',url);localStorage.setItem('sm_key',key);location.reload();};
+$('changeConfig').onclick=()=>{const c=config();$('sbUrl').value=c.url||'';$('sbKey').value=c.key||'';showOnly('configScreen');};
+$('loginBtn').onclick=async()=>{msg('A entrar...');const {error}=await supabase.auth.signInWithPassword({email:$('email').value,password:$('password').value});msg(error?.message||'');};
+$('signupBtn').onclick=async()=>{msg('A criar conta...');const {data,error}=await supabase.auth.signUp({email:$('email').value,password:$('password').value});msg(error?.message||(data.session?'Conta criada.':'Conta criada. Confirma o email se for pedido.'));};
+$('logoutBtn').onclick=async()=>{await supabase.auth.signOut();};
+$('settingsBtn').onclick=()=>{show('categoryModal');$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
+$('addProductBtn').onclick=()=>openProduct();$('cancelProduct').onclick=()=>hide('productModal');$('saveProduct').onclick=saveProduct;
+$('closeCategories').onclick=()=>hide('categoryModal');
+$('addCategory').onclick=async()=>{const name=$('newCategory').value.trim();if(!name)return;const {error}=await supabase.from('categories').insert({name,user_id:user.id});if(error){alert('Não foi possível adicionar a categoria. '+error.message);return;}$('newCategory').value='';await refreshCategories();$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
+$('productGrid').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const p=products.find(x=>x.id===b.dataset.id);if(!p)return;const act=b.dataset.act;
+  if(act==='edit')openProduct(p);
+  if(act==='plus'||act==='minus'){const quantity=Number(p.quantity)+(act==='plus'?1:-1);if(quantity<0)return;const {error}=await supabase.from('products').update({quantity}).eq('id',p.id);if(error)alert(error.message);else await refreshProducts();}
+  if(act==='delete'&&confirm(`Eliminar "${p.name}"?`)){const {error}=await supabase.from('products').delete().eq('id',p.id);if(error)alert(error.message);else await refreshProducts();}
+};
+$('search').oninput=render;$('categoryFilter').onchange=render;
+init();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
