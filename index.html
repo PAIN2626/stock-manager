@@ -85,7 +85,7 @@
     <div class="stats">
       <div class="stat"><div class="muted small">Artigos</div><div class="num" id="statProducts">0</div></div>
       <div class="stat"><div class="muted small">Unidades em stock</div><div class="num" id="statUnits">0</div></div>
-      <div class="stat"><div class="muted small">A repor (0 ou 1)</div><div class="num" id="statLow">0</div></div>
+      <div class="stat"><div class="muted small">Última unidade (0 ou 1)</div><div class="num" id="statLow">0</div></div>
       <div class="stat"><div class="muted small">Esgotados</div><div class="num" id="statOut">0</div></div>
       <div class="stat"><div class="muted small">Valor total do stock</div><div class="num" id="statStockValue">0,00 €</div></div>
     </div>
@@ -150,7 +150,7 @@ const msg = (t) => { $('authMsg').textContent=t||''; };
 const config = () => ({url:localStorage.getItem('sm_url'),key:localStorage.getItem('sm_key')});
 
 function showOnly(screen){['configScreen','authScreen','recoveryScreen','appScreen'].forEach(x=>hide(x));show(screen);}
-function status(q){if(q<=1)return ['red',q===0?'Esgotado':'Repor'];if(q<=5)return ['amber','Atenção'];return ['green','Disponível'];}
+function status(q){if(q<=1)return ['red','Última Unidade'];return ['green',''];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function money(v){return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(Number(v)||0);}
 function categoryNeedsSize(categoryName){
@@ -217,6 +217,7 @@ function render(){
     return `<article class="product ${tone}">
       <div class="phead"><div><div class="pname">${esc(p.name)}</div><div class="muted small">${esc(catName)}${p.sku?' · '+esc(p.sku):''}${p.size?' · Tam. '+esc(p.size):''}</div></div><span class="status ${tone}">${label}</span></div>
       <div class="qty">${Number(p.quantity)} <span class="muted small">un.</span></div>
+      ${label ? `<span class="status ${tone}">${label}</span>` : ''}
       <div class="small muted">Preço de venda: ${money(p.sale_price)} · Valor em stock: <strong>${money(Number(p.quantity)*Number(p.sale_price||0))}</strong></div>
       <div class="actions"><button class="btn secondary" data-act="minus" data-id="${p.id}">− 1</button><button class="btn secondary" data-act="plus" data-id="${p.id}">＋ 1</button><button class="btn ghost" data-act="edit" data-id="${p.id}">Editar</button><button class="btn danger" data-act="delete" data-id="${p.id}">Eliminar</button></div>
     </article>`;
