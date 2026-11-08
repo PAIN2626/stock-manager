@@ -16,7 +16,7 @@
     .wrap{max-width:1180px;margin:28px auto;padding:0 20px}.muted{color:#6b7280}.small{font-size:13px}
     .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
     h1{font-size:28px;margin:0 0 6px;letter-spacing:-.7px}h2{font-size:18px;margin:0 0 14px}
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0 24px}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:18px 0 24px}
     .stat,.panel,.product{background:white;border:1px solid #e7eaf1;border-radius:16px;box-shadow:0 3px 12px #17255408}
     .stat{padding:18px}.stat .num{font-size:28px;font-weight:800;margin-top:6px}
     .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.filters input{flex:1;min-width:180px}
@@ -37,7 +37,8 @@
     .empty{background:white;border:1px dashed #cbd5e1;border-radius:16px;padding:42px 20px;text-align:center;color:#64748b;grid-column:1/-1}
     .hidden{display:none!important}.notice{background:#eff6ff;border:1px solid #bfdbfe;padding:12px 14px;border-radius:12px;color:#1e40af;margin:14px 0}
     .topright{display:flex;gap:8px;align-items:center}.topright button{font-size:13px;padding:8px 10px}
-    @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:1000px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:560px){.wrap{margin:20px auto;padding:0 14px}.top{padding:15px}.grid{grid-template-columns:1fr}.stat{padding:14px}.stat .num{font-size:24px}h1{font-size:24px}.topright .small{display:none}}
   </style>
 </head>
@@ -86,6 +87,7 @@
       <div class="stat"><div class="muted small">Unidades em stock</div><div class="num" id="statUnits">0</div></div>
       <div class="stat"><div class="muted small">A repor (0 ou 1)</div><div class="num" id="statLow">0</div></div>
       <div class="stat"><div class="muted small">Esgotados</div><div class="num" id="statOut">0</div></div>
+      <div class="stat"><div class="muted small">Valor total do stock</div><div class="num" id="statStockValue">0,00 €</div></div>
     </div>
     <div class="filters">
       <input id="search" placeholder="Pesquisar artigo...">
@@ -103,6 +105,11 @@
     <label>Referência (opcional)</label><input id="pSku" placeholder="Ex.: TS-001">
     <label>Categoria *</label><select id="pCategory"></select>
     <label>Quantidade em stock *</label><input id="pQty" type="number" min="0" step="1" value="0">
+    <label>Preço de venda por unidade (€) *</label><input id="pSalePrice" type="number" min="0" step="0.01" value="0.00" placeholder="Ex.: 19,99">
+    <div id="sizeField">
+      <label>Tamanho *</label><input id="pSize" type="text" maxlength="30" placeholder="Ex.: S, M, L, 38, 40">
+      <p class="small muted">Para controlar tamanhos diferentes, cria um registo por tamanho.</p>
+    </div>
     <div class="modalfoot"><button class="btn ghost" id="cancelProduct">Cancelar</button><button class="btn" id="saveProduct">Guardar artigo</button></div>
   </div>
 </div>
@@ -122,22 +129,26 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const $ = id => document.getElementById(id);
 const defaults = ['Acessórios','Calças','Calçado','Perfumes','Ambientadores','Casacos','Camisolas','T-shirts','Vestidos'];
 let supabase=null, user=null, products=[], categories=[], editingId=null, channel=null;
-const show = id => {
-  const el = $(id);
-  if (el.classList.contains('modalback')) el.style.display = 'flex';
-  else el.classList.remove('hidden');
-};
-const hide = id => {
-  const el = $(id);
-  if (el.classList.contains('modalback')) el.style.display = 'none';
-  else el.classList.add('hidden');
-};
+const show = id => $(id).classList.remove('hidden');
+const hide = id => $(id).classList.add('hidden');
 const msg = (t) => { $('authMsg').textContent=t||''; };
 const config = () => ({url:localStorage.getItem('sm_url'),key:localStorage.getItem('sm_key')});
 
 function showOnly(screen){['configScreen','authScreen','recoveryScreen','appScreen'].forEach(x=>hide(x));show(screen);}
 function status(q){if(q<=1)return ['red',q===0?'Esgotado':'Repor'];if(q<=5)return ['amber','Atenção'];return ['green','Disponível'];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function money(v){return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(Number(v)||0);}
+function categoryNeedsSize(categoryName){
+  const n=String(categoryName||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  return ['calcado','calcas','casacos','camisolas','t-shirts','tshirts','vestidos'].includes(n);
+}
+function updateSizeField(){
+  const name=$('pCategory').selectedOptions[0]?.textContent||'';
+  const required=categoryNeedsSize(name);
+  $('sizeField').classList.toggle('hidden',!required);
+  $('pSize').required=required;
+  if(!required)$('pSize').value='';
+}
 
 async function init(){
   const c=config();
@@ -178,34 +189,44 @@ function render(){
   $('statUnits').textContent=products.reduce((a,p)=>a+Number(p.quantity||0),0);
   $('statLow').textContent=products.filter(p=>Number(p.quantity)<=1).length;
   $('statOut').textContent=products.filter(p=>Number(p.quantity)===0).length;
+  $('statStockValue').textContent=money(products.reduce((a,p)=>a+Number(p.quantity||0)*Number(p.sale_price||0),0));
   const current=$('categoryFilter').value;
   $('categoryFilter').innerHTML='<option value="">Todas as categorias</option>'+categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   $('categoryFilter').value=current;
   $('pCategory').innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   const term=$('search').value.toLowerCase(), cat=$('categoryFilter').value;
-  const list=products.filter(p=>(!cat||p.category_id===cat)&&(!term||(p.name+' '+(p.sku||'')).toLowerCase().includes(term)));
+  const list=products.filter(p=>(!cat||p.category_id===cat)&&(!term||(p.name+' '+(p.sku||'')+' '+(p.size||'')).toLowerCase().includes(term)));
   $('productGrid').innerHTML=list.length?list.map(p=>{
     const [tone,label]=status(Number(p.quantity));
     const catName=categories.find(c=>c.id===p.category_id)?.name||'Sem categoria';
     return `<article class="product ${tone}">
-      <div class="phead"><div><div class="pname">${esc(p.name)}</div><div class="muted small">${esc(catName)}${p.sku?' · '+esc(p.sku):''}</div></div><span class="status ${tone}">${label}</span></div>
+      <div class="phead"><div><div class="pname">${esc(p.name)}</div><div class="muted small">${esc(catName)}${p.sku?' · '+esc(p.sku):''}${p.size?' · Tam. '+esc(p.size):''}</div></div><span class="status ${tone}">${label}</span></div>
       <div class="qty">${Number(p.quantity)} <span class="muted small">un.</span></div>
+      <div class="small muted">Preço de venda: ${money(p.sale_price)} · Valor em stock: <strong>${money(Number(p.quantity)*Number(p.sale_price||0))}</strong></div>
       <div class="actions"><button class="btn secondary" data-act="minus" data-id="${p.id}">− 1</button><button class="btn secondary" data-act="plus" data-id="${p.id}">＋ 1</button><button class="btn ghost" data-act="edit" data-id="${p.id}">Editar</button><button class="btn danger" data-act="delete" data-id="${p.id}">Eliminar</button></div>
     </article>`;
   }).join(''):'<div class="empty"><strong>Não há artigos para mostrar.</strong><br><span class="small">Adiciona o teu primeiro artigo ou altera os filtros.</span></div>';
 }
 async function saveProduct(){
   const name=$('pName').value.trim(), sku=$('pSku').value.trim()||null, category_id=$('pCategory').value, quantity=Number($('pQty').value);
-  if(!name||!category_id||!Number.isInteger(quantity)||quantity<0){alert('Preenche o nome, a categoria e uma quantidade válida (zero ou mais).');return;}
-  const row={name,sku,category_id,quantity,user_id:user.id};
+  const sale_price=Number(String($('pSalePrice').value).replace(',','.'));
+  const categoryName=$('pCategory').selectedOptions[0]?.textContent||'';
+  const size=categoryNeedsSize(categoryName)?$('pSize').value.trim():null;
+  if(!name||!category_id||!Number.isInteger(quantity)||quantity<0||!Number.isFinite(sale_price)||sale_price<0){
+    alert('Preenche o nome, a categoria, uma quantidade válida e um preço de venda igual ou superior a zero.');return;
+  }
+  if(categoryNeedsSize(categoryName)&&!size){alert('Indica o tamanho deste artigo.');return;}
+  const row={name,sku,category_id,quantity,sale_price,size,user_id:user.id};
   const result=editingId?await supabase.from('products').update(row).eq('id',editingId):await supabase.from('products').insert(row);
-  if(result.error){alert('Não foi possível guardar. '+result.error.message);return;}
+  if(result.error){alert('Não foi possível guardar. '+result.error.message+'\\nConfirma que executaste o ficheiro de atualização SQL no Supabase.');return;}
   hide('productModal');await refreshProducts();
 }
 function openProduct(p=null){
   editingId=p?.id||null;$('modalTitle').textContent=p?'Editar artigo':'Novo artigo';
   $('pName').value=p?.name||'';$('pSku').value=p?.sku||'';$('pQty').value=p?.quantity??0;
+  $('pSalePrice').value=p?.sale_price??'0.00';$('pSize').value=p?.size||'';
   if(p)$('pCategory').value=p.category_id;
+  updateSizeField();
   show('productModal');
 }
 $('saveConfig').onclick=()=>{const url=$('sbUrl').value.trim().replace(/\/$/,''),key=$('sbKey').value.trim();if(!url.startsWith('https://')||!key){alert('Introduz um URL válido e a chave publicável.');return;}localStorage.setItem('sm_url',url);localStorage.setItem('sm_key',key);location.reload();};
@@ -232,6 +253,7 @@ $('saveNewPassword').onclick=async()=>{
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();};
 $('settingsBtn').onclick=()=>{show('categoryModal');$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
 $('addProductBtn').onclick=()=>openProduct();$('cancelProduct').onclick=()=>hide('productModal');$('saveProduct').onclick=saveProduct;
+$('pCategory').onchange=updateSizeField;
 $('closeCategories').onclick=()=>hide('categoryModal');
 $('addCategory').onclick=async()=>{const name=$('newCategory').value.trim();if(!name)return;const {error}=await supabase.from('categories').insert({name,user_id:user.id});if(error){alert('Não foi possível adicionar a categoria. '+error.message);return;}$('newCategory').value='';await refreshCategories();$('categoryList').innerHTML=categories.map(c=>esc(c.name)).join(' · ');};
 $('productGrid').onclick=async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const p=products.find(x=>x.id===b.dataset.id);if(!p)return;const act=b.dataset.act;

@@ -51,3 +51,14 @@ Aplicação web responsiva e instalável (PWA) para gerir o stock de uma única 
 - Se surgir erro ao carregar, confirma se executaste o SQL completo e se usaste o Project URL e a chave publicável corretos.
 - Se a confirmação de email estiver ativa no Supabase, confirma o email antes de iniciar sessão.
 - Para alterar o URL/chave neste dispositivo, entra na página de autenticação e escolhe `Alterar configuração`.
+
+
+## Atualização: preço de venda e tamanhos
+
+1. No Supabase, abre **SQL Editor > New query**.
+2. Copia e executa todo o conteúdo de `supabase-atualizacao-preco-tamanho.sql`.
+3. No GitHub, substitui o `index.html` e o `sw.js` pelos ficheiros desta versão.
+4. Faz **Commit changes** e espera que o GitHub Pages publique a alteração.
+5. Abre o site e atualiza com `Ctrl + Shift + R`.
+
+O preço de venda é registado por unidade. O valor total do stock é calculado automaticamente pela soma de quantidade × preço de venda. Os tamanhos são pedidos apenas nas categorias Calçado, Calças, Casacos, Camisolas, T-shirts e Vestidos. Cada tamanho deve ser um registo separado, com a sua própria quantidade.
